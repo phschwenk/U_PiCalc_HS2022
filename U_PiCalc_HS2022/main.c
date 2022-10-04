@@ -32,6 +32,8 @@
 
 
 void controllerTask(void* pvParameters);
+void calculatLeibniz(void* pvParameters);
+
 
 int main(void)
 {
@@ -39,6 +41,7 @@ int main(void)
 	vInitDisplay();
 	
 	xTaskCreate( controllerTask, (const char *) "control_tsk", configMINIMAL_STACK_SIZE+150, NULL, 3, NULL);
+	xTaskCreate(calculatLeibniz, (const char *) "calculat_leibniz", configMINIMAL_STACK_SIZE+150, NULL, 1, NULL)
 
 	vDisplayClear();
 	vDisplayWriteStringAtPos(0,0,"PI-Calc HS2022");
@@ -78,5 +81,13 @@ void controllerTask(void* pvParameters) {
 			
 		}
 		vTaskDelay(10/portTICK_RATE_MS);
+	}
+}
+void calculatLeibniz(void* pvParameters){
+	float Pi4_L = 1.0;
+	for(;;){
+		uint32_t n =3;
+		Pi4_L = Pi4_L -(1.0/n)+(1.0/(n+2));
+		n = n+4;
 	}
 }
