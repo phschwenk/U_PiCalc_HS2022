@@ -60,8 +60,8 @@ int main(void)
 	xTaskCreate(calculatLeibniz, (const char *) "calculat_leibniz", configMINIMAL_STACK_SIZE+150, NULL, 1, NULL);	// Pi berechnen mit Leibniz
 	xTaskCreate(calculatEuler, (const char *) "calculat_euler", configMINIMAL_STACK_SIZE+150, NULL, 1, NULL);		// Pi berechnen mit Euler
 
-	vDisplayClear();
-	vDisplayWriteStringAtPos(0,0,"PI-Calc HS2022 Philipp");
+// 	vDisplayClear();
+// 	vDisplayWriteStringAtPos(0,0,"PI-Calc HS2022 Philipp");
 	vTaskStartScheduler();
 	return 0;
 }
@@ -74,8 +74,8 @@ int main(void)
 // Steuerungs Task das Display und die sichere ausgabe von Pi macht
 void controllerTask(void* pvParameters) {
 	float Pi_Ausgabe = 0;
+	uint16_t zaehler = 0;		
 	uint8_t mode = MODE_IDLE;
-	uint16_t zaehler = 0;
 	while(egButtonEvents == NULL) { //Wait for EventGroup to be initialized in other task
 		vTaskDelay(10/portTICK_RATE_MS);
 	}
@@ -84,7 +84,7 @@ void controllerTask(void* pvParameters) {
 	
 	for(;;) {
 		switch(mode) {
-			case MODE_IDLE: {				
+			case MODE_IDLE: {		
 				if (xEventGroupGetBits(egButtonEvents) & BUTTON1_SHORT){
 					xEventGroupSetBits(egButtonEvents, START_PI_1);
 				}
@@ -92,16 +92,16 @@ void controllerTask(void* pvParameters) {
 					xEventGroupClearBits(egButtonEvents, START_PI_1);
 				}
 				
-				if (zaehler == 200 || 400 || 600){
+				if (zaehler >= 200 || zaehler >= 400 || zaehler >= 600){
 					mode = MODE_DISPLAY_AKTUEALISIEREN;
-					if (zaehler == 600){
+					if (zaehler >= 600){
 						zaehler = 0;
 					}
 				}
-				if (zaehler = 500){
+				if (zaehler == 500){
 					mode = MODE_PI_IN_AUSGANGS_VAR;
 				}
-				zaehler = zaehler++;
+				zaehler = zaehler+1;
 				break;	
 			}
 			case MODE_PI_IN_AUSGANGS_VAR: {
@@ -141,9 +141,22 @@ void controllerTask(void* pvParameters) {
 					vDisplayWriteStringAtPos(1,0,"Aktueller Wert: %d",Pi_Ausgabe);
 					vDisplayWriteStringAtPos(2,0,"Zeit seit beginn: ");
 					vDisplayWriteStringAtPos(3,0,"B1 str | B2 stp | B3 rst | B4 Wechsel");
-					
 				}
-			
+				else if(xEventGroupGetBits(egButtonEvents) & START_PI_2){
+					vDisplayClear();
+					vDisplayWriteStringAtPos(0,0,"Pi wird mit Euler berechnet");
+					vDisplayWriteStringAtPos(1,0,"Aktueller Wert: %d",Pi_Ausgabe);
+					vDisplayWriteStringAtPos(2,0,"Zeit seit beginn: ");
+					vDisplayWriteStringAtPos(3,0,"B1 str | B2 stp | B3 rst | B4 Wechsel");
+				}
+				else{
+					vDisplayClear();
+					vDisplayWriteStringAtPos(0,0,"Zum Pi Rechnen Start Drücken");
+					vDisplayWriteStringAtPos(1,0,"1");
+					vDisplayWriteStringAtPos(2,0,"1");
+					vDisplayWriteStringAtPos(3,0,"B1 str | B2 stp | B3 rst | B4 Wechsel");
+				}
+				mode = MODE_IDLE;
 				break;
 			}
 		}
@@ -206,6 +219,6 @@ void ButtonTask(void *pvParameters) {
 		if(getButtonPress(BUTTON4) == SHORT_PRESSED) {
 			xEventGroupSetBits(egButtonEvents, BUTTON4_SHORT);
 		}
-		vTaskDelay((1/BUTTON_UPDATE_FREQUENCY_HZ)/portTICK_RATE_MS);
+		vTaskDelay((1000/BUTTON_UPDATE_FREQUENCY_HZ)/portTICK_RATE_MS);
 	}
 }
