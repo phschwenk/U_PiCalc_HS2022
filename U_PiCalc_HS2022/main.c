@@ -60,8 +60,9 @@ int main(void)
 	xTaskCreate(calculatLeibniz, (const char *) "calculat_leibniz", configMINIMAL_STACK_SIZE+150, NULL, 1, NULL);	// Pi berechnen mit Leibniz
 	xTaskCreate(calculatEuler, (const char *) "calculat_euler", configMINIMAL_STACK_SIZE+150, NULL, 1, NULL);		// Pi berechnen mit Euler
 
-// 	vDisplayClear();
-// 	vDisplayWriteStringAtPos(0,0,"PI-Calc HS2022 Philipp");
+	vDisplayClear();
+	vDisplayWriteStringAtPos(0,0,"PI-Calc HS2022");
+	vDisplayWriteStringAtPos(1,0,"Philipp Schwenk");
 	vTaskStartScheduler();
 	return 0;
 }
@@ -74,31 +75,34 @@ int main(void)
 // Steuerungs Task das Display und die sichere ausgabe von Pi macht
 void controllerTask(void* pvParameters) {
 	float Pi_Ausgabe = 0;
+	char PI_STRING[20]; //Variable for temporary string
 	uint16_t zaehler = 0;		
 	uint8_t mode = MODE_IDLE;
 	while(egButtonEvents == NULL) { //Wait for EventGroup to be initialized in other task
 		vTaskDelay(10/portTICK_RATE_MS);
 	}
-	vDisplayClear();
-	vDisplayWriteStringAtPos(0,0,"Pi Rechner V1.0");
+
 	
 	for(;;) {
 		switch(mode) {
-			case MODE_IDLE: {		
+			case MODE_IDLE: {
+				xEventGroupSetBits(egButtonEvents, START_PI_1);		
 				if (xEventGroupGetBits(egButtonEvents) & BUTTON1_SHORT){
 					xEventGroupSetBits(egButtonEvents, START_PI_1);
+					xEventGroupClearBits(egButtonEvents, BUTTON1_SHORT);
 				}
 				if (xEventGroupGetBits(egButtonEvents) & BUTTON2_SHORT){
 					xEventGroupClearBits(egButtonEvents, START_PI_1);
+					xEventGroupClearBits(egButtonEvents, BUTTON2_SHORT);
 				}
 				
-				if (zaehler >= 200 || zaehler >= 400 || zaehler >= 600){
+				if (zaehler == 20 || zaehler == 40 || zaehler == 60){
 					mode = MODE_DISPLAY_AKTUEALISIEREN;
-					if (zaehler >= 600){
+					if (zaehler >= 60){
 						zaehler = 0;
 					}
 				}
-				if (zaehler == 500){
+				if (zaehler == 50){
 					mode = MODE_PI_IN_AUSGANGS_VAR;
 				}
 				zaehler = zaehler+1;
@@ -138,28 +142,31 @@ void controllerTask(void* pvParameters) {
 				if(xEventGroupGetBits(egButtonEvents) & START_PI_1){
 					vDisplayClear();
 					vDisplayWriteStringAtPos(0,0,"Pi wird mit Leibniz berechnet");
-					vDisplayWriteStringAtPos(1,0,"Aktueller Wert: %d",Pi_Ausgabe);
+					sprintf(PI_STRING, "%1.5f",Pi_Ausgabe); //Writing Time into one string
+					vDisplayWriteStringAtPos(1,0,"Wert: %s", PI_STRING);
 					vDisplayWriteStringAtPos(2,0,"Zeit seit beginn: ");
-					vDisplayWriteStringAtPos(3,0,"B1 str | B2 stp | B3 rst | B4 Wechsel");
+					vDisplayWriteStringAtPos(3,0,"str|stp|rst|Wechsel");
 				}
 				else if(xEventGroupGetBits(egButtonEvents) & START_PI_2){
 					vDisplayClear();
 					vDisplayWriteStringAtPos(0,0,"Pi wird mit Euler berechnet");
-					vDisplayWriteStringAtPos(1,0,"Aktueller Wert: %d",Pi_Ausgabe);
+					vDisplayWriteStringAtPos(1,0,"Wert: %f",Pi_Ausgabe);
 					vDisplayWriteStringAtPos(2,0,"Zeit seit beginn: ");
-					vDisplayWriteStringAtPos(3,0,"B1 str | B2 stp | B3 rst | B4 Wechsel");
+					vDisplayWriteStringAtPos(3,0,"str|stp|rst|Wechsel");
 				}
 				else{
 					vDisplayClear();
 					vDisplayWriteStringAtPos(0,0,"Zum Pi Rechnen Start Drücken");
 					vDisplayWriteStringAtPos(1,0,"1");
 					vDisplayWriteStringAtPos(2,0,"1");
-					vDisplayWriteStringAtPos(3,0,"B1 str | B2 stp | B3 rst | B4 Wechsel");
+					vDisplayWriteStringAtPos(3,0,"str|stp|rst|Wechsel");
 				}
 				mode = MODE_IDLE;
+				
 				break;
 			}
 		}
+
 		vTaskDelay(10/portTICK_RATE_MS);
 		
 	}
@@ -168,9 +175,9 @@ void controllerTask(void* pvParameters) {
 // Pi berechnen mit der Leibnitz Reihe
 void calculatLeibniz(void* pvParameters){
 	float Pi4_L = 1.0;
+	uint32_t n = 3;
 	if (xEventGroupGetBits(egButtonEvents) & START_PI_1){
-		for(;;){
-			uint32_t n =3;
+		for(;;){			
 			Pi4_L = Pi4_L -(1.0/n)+(1.0/(n+2));
 			n = n+4;
 			piGerechnet = Pi4_L*4;
@@ -185,10 +192,10 @@ void calculatLeibniz(void* pvParameters){
 // Berechnen von Pi mit der Euler Reihe
 void calculatEuler(void *pvParameters){
 	float PiEuler = 0;
-	
+	uint32_t n = 1;
 	if (xEventGroupGetBits(egButtonEvents) & START_PI_2){
 		for(;;){
-			uint32_t n = 1;
+			
 			PiEuler = PiEuler + (1/(n^2));
 			n++;
 			piGerechnet = sqrt(PiEuler*6);
