@@ -36,6 +36,7 @@ void calculatLeibniz(void* pvParameters);
 void calculatEuler(void* pvParameters);
 void ButtonTask(void *pvParameters);
 float piGerechnet;
+uint16_t zeit_gemessen = 0;
 
 //EventGroup for ButtonEvents.
 EventGroupHandle_t egButtonEvents = NULL;
@@ -78,8 +79,10 @@ int main(void){
 void controllerTask(void* pvParameters) {
 	float Pi_Ausgabe = 0;
 	char PI_STRING[10]; //Variable for temporary string
+	char Zeit_STRING[10]; //Variable for temporary string
 	uint16_t zaehler = 0;
-	uint8_t zustand =0;		
+	uint8_t zustand =0;	
+	float zeit_ausgeben =0;	
 	uint8_t mode = MODE_IDLE;
 	while(egButtonEvents == NULL) { //Wait for EventGroup to be initialized in other task
 		vTaskDelay(10/portTICK_RATE_MS);
@@ -95,7 +98,7 @@ void controllerTask(void* pvParameters) {
 					if (zustand == 0){
 						xEventGroupSetBits(egButtonEvents, START_PI_1);
 					}
-					else{
+					else if (zustand ==1){
 						xEventGroupSetBits(egButtonEvents, START_PI_2);
 					}
 				}
@@ -103,7 +106,7 @@ void controllerTask(void* pvParameters) {
 					if (zustand == 0){
 						xEventGroupClearBits(egButtonEvents, START_PI_1);
 					}
-					else{
+					else if (zustand ==1){
 							xEventGroupClearBits(egButtonEvents, START_PI_2);
 					}
 				}
@@ -148,6 +151,7 @@ void controllerTask(void* pvParameters) {
 				xEventGroupWaitBits(egButtonEvents, PI_READY, false, false, portMAX_DELAY);
 				
 				Pi_Ausgabe = piGerechnet;
+				zeit_ausgeben = zeit_gemessen/1000;
 				
 				if ( zustand == 0){
 					xEventGroupSetBits(egButtonEvents, START_PI_1);
@@ -163,27 +167,29 @@ void controllerTask(void* pvParameters) {
 			}
 			case MODE_DISPLAY_AKTUEALISIEREN: {
 				
-				if(xEventGroupGetBits(egButtonEvents) & START_PI_1){
+				if(zustand == 0){
 					vDisplayClear();
 					vDisplayWriteStringAtPos(0,0,"Pi wird mit Leibniz berechnet");
-					sprintf(PI_STRING, "%1.5f",Pi_Ausgabe); //Writing Time into one string
+					sprintf(PI_STRING, "%1.7f",Pi_Ausgabe); //Writing Time into one string
 					vDisplayWriteStringAtPos(1,0,"Wert: %s", PI_STRING);
-					vDisplayWriteStringAtPos(2,0,"Zeit seit begin: ");
+					sprintf(Zeit_STRING, "%2.3f",zeit_ausgeben); //Writing Time into one string
+					vDisplayWriteStringAtPos(2,0,"Zeit bis Genau: %s ",Zeit_STRING);
 					vDisplayWriteStringAtPos(3,0,"str|stp|rst|Wechsel");
 				}
-				else if(xEventGroupGetBits(egButtonEvents) & START_PI_2){
+				else if(zustand ==1){
 					vDisplayClear();
 					vDisplayWriteStringAtPos(0,0,"Pi mit Euler berechnet");
-					sprintf(PI_STRING, "%1.5f",Pi_Ausgabe); //Writing Time into one string
+					sprintf(PI_STRING, "%1.7f",Pi_Ausgabe); //Writing Time into one string
 					vDisplayWriteStringAtPos(1,0,"Wert: %s",PI_STRING);
-					vDisplayWriteStringAtPos(2,0,"Zeit seit begin: ");
+					sprintf(Zeit_STRING, "%2.3f",zeit_ausgeben); //Writing Time into one string
+					vDisplayWriteStringAtPos(2,0,"Zeit bis Genau: %s ",Zeit_STRING);
 					vDisplayWriteStringAtPos(3,0,"str|stp|rst|Wechsel");
 				}
 				else{
 					vDisplayClear();
-					vDisplayWriteStringAtPos(0,0,"Zum Pi Rechnen Start Drücken");
-					vDisplayWriteStringAtPos(1,0,"1");
-					vDisplayWriteStringAtPos(2,0,"1");
+					vDisplayWriteStringAtPos(0,0,"Zum Pi Rechnen Start");
+					vDisplayWriteStringAtPos(1,0,"Druecken");
+					vDisplayWriteStringAtPos(2,0,"");
 					vDisplayWriteStringAtPos(3,0,"str|stp|rst|Wechsel");
 				}
 				mode = MODE_IDLE;
@@ -201,8 +207,8 @@ void controllerTask(void* pvParameters) {
 void calculatLeibniz(void* pvParameters){
 	float Pi4_L = 1.0;
 	uint32_t n = 3;
-	char pi_string_1[10] = "3.14159";
-	char pi_string_2[10] = "0";
+	uint32_t Pi_vergleich_1 = 314159;
+	uint32_t Pi_vergleich_2 = 1;
 	
 	while(egButtonEvents == NULL) { //Wait for EventGroup to be initialized in other task
 		vTaskDelay(10/portTICK_RATE_MS);
@@ -210,15 +216,19 @@ void calculatLeibniz(void* pvParameters){
 	
 	for(;;){
 		xEventGroupSetBits(egButtonEvents, PI_READY);
+		xEventGroupWaitBits(egButtonEvents, START_PI_1, false, false, portMAX_DELAY);
 		
 		if (xEventGroupGetBits(egButtonEvents)&START_PI_1){
 	
-			if (pi_string_1 != pi_string_2){
+			if (Pi_vergleich_1 != Pi_vergleich_2){
 				while (xEventGroupGetBits(egButtonEvents)&START_PI_1){
 					Pi4_L = Pi4_L -(1.0/n)+(1.0/(n+2));
 					n = n+4;
 					piGerechnet = Pi4_L*4;
-					sprintf(pi_string_2,"%1.5f",piGerechnet);
+					Pi_vergleich_2 = piGerechnet*100000;
+					if (Pi_vergleich_1 == Pi_vergleich_2) {
+						zeit_gemessen = xTaskGetTickCount();
+					}
 				}
 			}
 		}
@@ -235,8 +245,8 @@ void calculatLeibniz(void* pvParameters){
 void calculatEuler(void *pvParameters){
 	float PiEuler = 0;
 	uint32_t n = 1;
-	char pi_string_1[10] = "3.14159";
-	char pi_string_2[10] = "0";
+	uint32_t Pi_vergleich_1 = 314159;
+	uint32_t Pi_vergleich_2 = 1;
 	
 	while(egButtonEvents == NULL) { //Wait for EventGroup to be initialized in other task
 		vTaskDelay(10/portTICK_RATE_MS);
@@ -246,14 +256,17 @@ void calculatEuler(void *pvParameters){
 		xEventGroupSetBits(egButtonEvents, PI_READY);
 		xEventGroupWaitBits(egButtonEvents, START_PI_2, false, false, portMAX_DELAY);
 		
-		if (pi_string_1 != pi_string_2){
+		if (Pi_vergleich_1 == Pi_vergleich_2){
 			while (xEventGroupGetBits(egButtonEvents) & START_PI_2){
 		
 			
 					PiEuler = PiEuler + (1.0/(pow(n,2)));
 					n++;
 					piGerechnet = sqrt(PiEuler*6);
-					sprintf(pi_string_2,"%1.5f",piGerechnet);
+					Pi_vergleich_2 = piGerechnet*100000;
+					if (Pi_vergleich_1 == Pi_vergleich_2) {
+						zeit_gemessen = xTaskGetTickCount();
+					}
 			}
 		}
 		else{
