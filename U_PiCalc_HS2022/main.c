@@ -81,7 +81,7 @@ void controllerTask(void* pvParameters) {
 	char PI_STRING[10]; //Variable for temporary string
 	char Zeit_STRING[10]; //Variable for temporary string
 	uint16_t zaehler = 0;
-	uint8_t zustand =0;	
+	uint8_t modus =0;	
 	float zeit_ausgeben =0;	
 	uint8_t mode = MODE_IDLE;
 	while(egButtonEvents == NULL) { //Wait for EventGroup to be initialized in other task
@@ -93,31 +93,31 @@ void controllerTask(void* pvParameters) {
 		switch(mode) {
 			case MODE_IDLE: {
 				zaehler = zaehler+1;
-				//xEventGroupSetBits(egButtonEvents, START_PI_1);		
+
 				if (xEventGroupGetBits(egButtonEvents) & BUTTON1_SHORT){
-					if (zustand == 0){
+					if (modus == 0){
 						xEventGroupSetBits(egButtonEvents, START_PI_1);
 					}
-					else if (zustand ==1){
+					else if (modus ==1){
 						xEventGroupSetBits(egButtonEvents, START_PI_2);
 					}
 				}
 				if (xEventGroupGetBits(egButtonEvents) & BUTTON2_SHORT){
-					if (zustand == 0){
+					if (modus == 0){
 						xEventGroupClearBits(egButtonEvents, START_PI_1);
 					}
-					else if (zustand ==1){
+					else if (modus ==1){
 							xEventGroupClearBits(egButtonEvents, START_PI_2);
 					}
 				}
 				if (xEventGroupGetBits(egButtonEvents)& BUTTON4_SHORT){
-					if (zustand==0){
-						zustand =1;
+					if (modus==0){
+						modus =1;
 						xEventGroupClearBits(egButtonEvents,START_PI_1);
 					}
-					else if (zustand ==1){
+					else if (modus ==1){
 						xEventGroupClearBits(egButtonEvents,START_PI_2);
-						zustand =0;
+						modus =0;
 					}
 				}
 				
@@ -167,7 +167,7 @@ void controllerTask(void* pvParameters) {
 			}
 			case MODE_DISPLAY_AKTUEALISIEREN: {
 				
-				if(zustand == 0){
+				if(modus == 0){
 					vDisplayClear();
 					vDisplayWriteStringAtPos(0,0,"Pi wird mit Leibniz berechnet");
 					sprintf(PI_STRING, "%1.7f",Pi_Ausgabe); //Writing Time into one string
@@ -176,7 +176,7 @@ void controllerTask(void* pvParameters) {
 					vDisplayWriteStringAtPos(2,0,"Zeit bis Genau: %s ",Zeit_STRING);
 					vDisplayWriteStringAtPos(3,0,"str|stp|rst|Wechsel");
 				}
-				else if(zustand ==1){
+				else if(modus ==1){
 					vDisplayClear();
 					vDisplayWriteStringAtPos(0,0,"Pi mit Euler berechnet");
 					sprintf(PI_STRING, "%1.7f",Pi_Ausgabe); //Writing Time into one string
@@ -256,7 +256,7 @@ void calculatEuler(void *pvParameters){
 		xEventGroupSetBits(egButtonEvents, PI_READY);
 		xEventGroupWaitBits(egButtonEvents, START_PI_2, false, false, portMAX_DELAY);
 		
-		if (Pi_vergleich_1 == Pi_vergleich_2){
+		if (Pi_vergleich_1 != Pi_vergleich_2){
 			while (xEventGroupGetBits(egButtonEvents) & START_PI_2){
 		
 			
